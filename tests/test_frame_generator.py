@@ -3,9 +3,10 @@ from PIL import Image
 from pixelforge.frame_generator import FrameGenerator
 
 
+@patch("pixelforge.frame_generator.ensure_cached")
 @patch("pixelforge.frame_generator.StableDiffusionControlNetPipeline")
 @patch("pixelforge.frame_generator.ControlNetModel")
-def test_generate_per_pose_returns_one_image_per_pose(mock_cn, mock_pipe_cls):
+def test_generate_per_pose_returns_one_image_per_pose(mock_cn, mock_pipe_cls, mock_cache):
     pose_a = Image.new("RGB", (512, 512), "black")
     pose_b = Image.new("RGB", (512, 512), "black")
 
@@ -23,9 +24,10 @@ def test_generate_per_pose_returns_one_image_per_pose(mock_cn, mock_pipe_cls):
     assert all(isinstance(img, Image.Image) for img in results)
 
 
+@patch("pixelforge.frame_generator.ensure_cached")
 @patch("pixelforge.frame_generator.StableDiffusionControlNetPipeline")
 @patch("pixelforge.frame_generator.ControlNetModel")
-def test_generate_with_reference_calls_ip_adapter(mock_cn, mock_pipe_cls):
+def test_generate_with_reference_calls_ip_adapter(mock_cn, mock_pipe_cls, mock_cache):
     pose = Image.new("RGB", (512, 512), "black")
     ref = Image.new("RGB", (512, 512), "red")
 

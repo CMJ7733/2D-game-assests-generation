@@ -1,6 +1,6 @@
 """Generate a single 'master' character reference image with SD1.5."""
 from __future__ import annotations
-from pixelforge.config import DEFAULT_CONFIG  # this also sets HF_ENDPOINT
+from pixelforge.config import DEFAULT_CONFIG, ensure_cached
 
 import torch
 from diffusers import StableDiffusionPipeline
@@ -17,9 +17,11 @@ class ReferenceBuilder:
         if self._pipe is not None:
             return
         logger.info(f"Loading SD1.5 from {self.cfg.sd_model_id}...")
+        ensure_cached(self.cfg.sd_model_id)
         dtype = torch.float16 if self.cfg.dtype == "float16" else torch.float32
         self._pipe = StableDiffusionPipeline.from_pretrained(
             self.cfg.sd_model_id,
+            local_files_only=True,
             torch_dtype=dtype,
             safety_checker=None,
             requires_safety_checker=False,

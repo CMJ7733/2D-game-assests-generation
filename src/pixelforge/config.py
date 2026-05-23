@@ -46,3 +46,14 @@ DEFAULT_CONFIG = GenerationConfig()
 def ensure_dirs() -> None:
     for d in (ASSETS_DIR, MODELS_DIR, OUTPUT_DIR, POSES_DIR, TEMPLATES_DIR, EXAMPLES_DIR):
         d.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_cached(repo_id: str, allow_patterns: list[str] | None = None) -> None:
+    """Ensure a HF model repo is in local cache. Downloads via HF_ENDPOINT if missing."""
+    from huggingface_hub import snapshot_download
+    try:
+        snapshot_download(repo_id, local_files_only=True, allow_patterns=allow_patterns)
+    except Exception:
+        endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co")
+        print(f"[pixelforge] Downloading {repo_id} from {endpoint} ...")
+        snapshot_download(repo_id, allow_patterns=allow_patterns)

@@ -1,6 +1,6 @@
 """Generate animation frames conditioned on pose skeletons (and later IP-Adapter)."""
 from __future__ import annotations
-from pixelforge.config import DEFAULT_CONFIG
+from pixelforge.config import DEFAULT_CONFIG, ensure_cached
 
 import torch
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel
@@ -19,12 +19,15 @@ class FrameGenerator:
             return
         dtype = torch.float16 if self.cfg.dtype == "float16" else torch.float32
         logger.info("Loading ControlNet OpenPose model...")
+        ensure_cached(self.cfg.controlnet_model_id)
         controlnet = ControlNetModel.from_pretrained(
-            self.cfg.controlnet_model_id, torch_dtype=dtype
+            self.cfg.controlnet_model_id, local_files_only=True, torch_dtype=dtype
         )
         logger.info("Loading SD1.5 + ControlNet pipeline...")
+        ensure_cached(self.cfg.sd_model_id)
         self._pipe = StableDiffusionControlNetPipeline.from_pretrained(
             self.cfg.sd_model_id,
+            local_files_only=True,
             controlnet=controlnet,
             torch_dtype=dtype,
             safety_checker=None,
@@ -37,10 +40,15 @@ class FrameGenerator:
             pass
         # Load IP-Adapter
         logger.info("Loading IP-Adapter...")
+        ensure_cached(
+            self.cfg.ip_adapter_repo,
+            allow_patterns=[f"{self.cfg.ip_adapter_subfolder}/{self.cfg.ip_adapter_weight_name}"],
+        )
         self._pipe.load_ip_adapter(
             self.cfg.ip_adapter_repo,
             subfolder=self.cfg.ip_adapter_subfolder,
             weight_name=self.cfg.ip_adapter_weight_name,
+            local_files_only=True,
         )
         self._pipe.set_ip_adapter_scale(self.cfg.ip_adapter_scale)
         logger.info("FrameGenerator pipeline + IP-Adapter loaded.")
