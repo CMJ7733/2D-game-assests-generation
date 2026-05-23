@@ -1,0 +1,25 @@
+[gd_resource type="SpriteFrames" load_steps={{ 2 + frame_count }} format=3]
+
+[ext_resource type="Texture2D" path="res://{{ png_relative }}" id="1_tex"]
+
+{% for fr in range(frame_count) -%}
+[sub_resource type="AtlasTexture" id="atlas_{{ fr }}"]
+atlas = ExtResource("1_tex")
+region = Rect2({{ (fr % columns) * frame_w }}, {{ (fr // columns) * frame_h }}, {{ frame_w }}, {{ frame_h }})
+
+{% endfor %}
+[resource]
+animations = [
+{%- for name, anim in animations.items() %}
+    {
+        "frames": [
+            {%- for idx in anim.frames -%}
+            {"duration": 1.0, "texture": SubResource("atlas_{{ idx }}")}{% if not loop.last %},{% endif %}
+            {%- endfor -%}
+        ],
+        "loop": {{ anim.loop | lower }},
+        "name": &"{{ name }}",
+        "speed": {{ anim.fps }}.0
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+]
