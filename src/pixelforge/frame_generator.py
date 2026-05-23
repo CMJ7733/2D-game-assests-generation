@@ -35,7 +35,15 @@ class FrameGenerator:
             self._pipe.enable_vae_slicing()
         except AttributeError:
             pass
-        logger.info("FrameGenerator pipeline loaded.")
+        # Load IP-Adapter
+        logger.info("Loading IP-Adapter...")
+        self._pipe.load_ip_adapter(
+            self.cfg.ip_adapter_repo,
+            subfolder=self.cfg.ip_adapter_subfolder,
+            weight_name=self.cfg.ip_adapter_weight_name,
+        )
+        self._pipe.set_ip_adapter_scale(self.cfg.ip_adapter_scale)
+        logger.info("FrameGenerator pipeline + IP-Adapter loaded.")
 
     def set_reference(self, image: Image.Image) -> None:
         """Save reference image for later IP-Adapter use (Phase 3)."""
@@ -53,7 +61,7 @@ class FrameGenerator:
         results: list[Image.Image] = []
         for i, pose in enumerate(pose_images):
             generator = torch.Generator(device=self.cfg.device).manual_seed(seed_val)
-            output = self._pipe(
+            pipe_kwargs = dict(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
                 image=pose,
@@ -62,6 +70,9 @@ class FrameGenerator:
                 controlnet_conditioning_scale=self.cfg.controlnet_conditioning_scale,
                 generator=generator,
             )
+            if self._reference_image is not None:
+                pipe_kwargs["ip_adapter_image"] = self._reference_image
+            output = self._pipe(**pipe_kwargs)
             results.append(output.images[0])
             logger.info(f"Frame {i+1}/{len(pose_images)} generated.")
         return results
