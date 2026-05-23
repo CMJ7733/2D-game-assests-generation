@@ -80,6 +80,14 @@ def generate_character(
     emit("Exporting...")
     ex = Exporter(output_dir)
     paths = ex.export_generic(sheet, meta, base_name=base_name)
+    try:
+        paths["tres"] = ex.export_godot(meta, base_name=base_name, png_relative=f"{base_name}.png")
+    except Exception as e:
+        logger.warning(f"Godot export failed: {e}")
+    try:
+        paths["meta"] = ex.export_unity(meta, base_name=base_name)
+    except Exception as e:
+        logger.warning(f"Unity export failed: {e}")
 
     return {
         "sheet": sheet,
