@@ -10,3 +10,6 @@ output/
 *.egg-info/
 dist/
 build/
+
+# Internal planning docs — do not upload to public repo
+docs/superpowers/

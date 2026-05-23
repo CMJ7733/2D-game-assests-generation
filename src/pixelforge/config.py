@@ -1,0 +1,48 @@
+"""Central configuration. Imported before diffusers/transformers to set HF endpoint."""
+import os
+
+# MUST be set before any HuggingFace library imports.
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+
+from pathlib import Path
+from pydantic import BaseModel
+
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+ASSETS_DIR = PROJECT_ROOT / "assets"
+MODELS_DIR = PROJECT_ROOT / "models"
+OUTPUT_DIR = PROJECT_ROOT / "output"
+POSES_DIR = ASSETS_DIR / "poses"
+TEMPLATES_DIR = ASSETS_DIR / "templates"
+EXAMPLES_DIR = ASSETS_DIR / "examples"
+
+
+class GenerationConfig(BaseModel):
+    sd_model_id: str = "runwayml/stable-diffusion-v1-5"
+    controlnet_model_id: str = "lllyasviel/sd-controlnet-openpose"
+    ip_adapter_repo: str = "h94/IP-Adapter"
+    ip_adapter_subfolder: str = "models"
+    ip_adapter_weight_name: str = "ip-adapter_sd15.bin"
+    pixel_lora_repo: str | None = None  # Set after downloading a suitable pixel LoRA
+    rmbg_model_id: str = "briaai/RMBG-1.4"
+
+    image_size: int = 512
+    num_inference_steps: int = 20
+    guidance_scale: float = 7.5
+    seed: int = 42
+
+    ip_adapter_scale: float = 0.7
+    controlnet_conditioning_scale: float = 0.9
+
+    target_sprite_size: tuple[int, int] = (64, 64)
+    palette_colors: int = 24
+
+    device: str = "mps"
+    dtype: str = "float16"
+
+
+DEFAULT_CONFIG = GenerationConfig()
+
+
+def ensure_dirs() -> None:
+    for d in (ASSETS_DIR, MODELS_DIR, OUTPUT_DIR, POSES_DIR, TEMPLATES_DIR, EXAMPLES_DIR):
+        d.mkdir(parents=True, exist_ok=True)
