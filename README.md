@@ -1,29 +1,29 @@
 # PixelForge
 
-**Text → 2D pixel-art game character with idle + walk animation, exported to your game engine in 2 minutes.**
+**输入文字描述 → 2分钟内生成带待机+行走动画的像素风游戏角色，直接导入你的游戏引擎。**
 
 ![sprite sheet](assets/examples/knight.png)
 
-## What it is
+## 这是什么
 
-PixelForge generates **consistent, animatable** character sprite sheets from natural-language descriptions.
-Unlike single-shot text-to-image tools, PixelForge produces a **12-frame sprite sheet** (4 idle + 8 walk-cycle)
-with the same character across all poses, and exports directly into:
+PixelForge 从自然语言描述生成**一致性强、可直接动画**的角色精灵表（Sprite Sheet）。
+不同于单张图生成工具，PixelForge 产出 **12帧精灵表**（4帧待机 + 8帧行走循环），
+所有姿势保持同一角色形象，并直接导出为：
 
-- Generic PNG + JSON (Phaser, custom engines)
-- Godot 4 SpriteFrames (.tres) — drag and drop
-- Unity sprite sheet + .meta
+- 通用 PNG + JSON（Phaser、自定义引擎）
+- Godot 4 SpriteFrames（.tres）— 拖拽即用
+- Unity 精灵表 + .meta
 
-## Tech
+## 技术栈
 
-Local Stable Diffusion 1.5 + ControlNet OpenPose + IP-Adapter (identity locking) + 12-pose pre-built skeleton library.
-Replicate / fal.ai fallback if local inference is unavailable.
+本地 Stable Diffusion 1.5 + ControlNet OpenPose + IP-Adapter（身份锁定）+ 12姿势预置骨架库。
+本地推理不可用时自动切换 Replicate / fal.ai API。
 
-Tested on MacBook M-series 16GB.
+已在 MacBook M 系列 16GB 上测试通过。
 
-## Quick start
+## 快速开始
 
-See [docs/INSTALL.md](docs/INSTALL.md).
+详见 [docs/INSTALL.md](docs/INSTALL.md)。
 
 ```bash
 uv venv --python 3.11
@@ -33,9 +33,9 @@ uv pip install -e ".[dev]"
 python -m pixelforge.app
 ```
 
-Open http://127.0.0.1:7860.
+浏览器打开 http://127.0.0.1:7860。
 
-## Architecture
+## 架构
 
-10-module pipeline: prompt_engineer → reference_builder → pose_library → frame_generator → post_processor → sheet_composer → exporter.
-See [docs/superpowers/specs/2026-05-23-pixelforge-design.md](docs/superpowers/specs/2026-05-23-pixelforge-design.md).
+10模块流水线：prompt_engineer → reference_builder → pose_library → frame_generator → post_processor → sheet_composer → exporter。
+详见 [docs/superpowers/specs/2026-05-23-pixelforge-design.md](docs/superpowers/specs/2026-05-23-pixelforge-design.md)。
