@@ -17,7 +17,7 @@ EXAMPLES_DIR = ASSETS_DIR / "examples"
 
 
 class GenerationConfig(BaseModel):
-    sd_model_id: str = "runwayml/stable-diffusion-v1-5"
+    sd_model_id: str = "stable-diffusion-v1-5/stable-diffusion-v1-5"
     controlnet_model_id: str = "lllyasviel/sd-controlnet-openpose"
     ip_adapter_repo: str = "h94/IP-Adapter"
     ip_adapter_subfolder: str = "models"

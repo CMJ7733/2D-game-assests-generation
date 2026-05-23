@@ -7,7 +7,7 @@ os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 from huggingface_hub import snapshot_download
 
 MODELS = [
-    ("runwayml/stable-diffusion-v1-5", None),
+    ("stable-diffusion-v1-5/stable-diffusion-v1-5", None),
     ("lllyasviel/sd-controlnet-openpose", None),
     ("h94/IP-Adapter", "models"),
     ("briaai/RMBG-1.4", None),
