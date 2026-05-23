@@ -55,7 +55,7 @@ def quantize_palette(img: Image.Image, n_colors: int = 24) -> Image.Image:
     alpha = rgba.split()[-1]
     rgb = rgba.convert("RGB")
     quantized = rgb.quantize(colors=n_colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-    out = quantized.convert("RGB")
+    out = quantized.convert("RGBA")
     out.putalpha(alpha)
     return out
 

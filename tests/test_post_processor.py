@@ -30,4 +30,4 @@ def test_postprocessor_full_pipeline_outputs_target_size():
     pp = PostProcessor(target_size=(64, 64), palette_colors=16)
     out = pp.process(img)
     assert out.size == (64, 64)
-    assert out.mode in ("RGBA", "P", "RGB")
+    assert out.mode == "RGBA"
