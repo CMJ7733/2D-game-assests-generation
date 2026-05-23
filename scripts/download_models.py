@@ -1,11 +1,10 @@
-"""Pre-download all required models to local cache via hf-mirror by default."""
+"""Pre-download all required models to HuggingFace default cache via hf-mirror."""
 import os
 import sys
 
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 from huggingface_hub import snapshot_download
-from pathlib import Path
 
 MODELS = [
     ("runwayml/stable-diffusion-v1-5", None),
@@ -13,9 +12,6 @@ MODELS = [
     ("h94/IP-Adapter", "models"),
     ("briaai/RMBG-1.4", None),
 ]
-
-CACHE = Path(__file__).parent.parent / "models"
-CACHE.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> int:
@@ -27,7 +23,7 @@ def main() -> int:
 
     for repo_id, subfolder in MODELS:
         print(f"\n→ Downloading {repo_id}" + (f"/{subfolder}" if subfolder else ""))
-        kwargs = {"repo_id": repo_id, "cache_dir": str(CACHE)}
+        kwargs = {"repo_id": repo_id}
         if subfolder:
             kwargs["allow_patterns"] = [f"{subfolder}/*"]
         try:

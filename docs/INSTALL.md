@@ -30,12 +30,12 @@
 
 4. Download models (uses hf-mirror.com by default; ~10-15min on good connection):
    ```
-   ./scripts/download_models.sh
+   python scripts/download_models.py
    ```
 
    For official HuggingFace:
    ```
-   ./scripts/download_models.sh --official
+   python scripts/download_models.py --official
    ```
 
 5. Run:
@@ -47,5 +47,5 @@
 
 - **`torch.backends.mps.is_available()` returns False**: macOS 12.3+ required; reinstall `torch>=2.3.0`.
 - **Out of memory**: close Chrome / other heavy apps; set `dtype="float16"` in `config.py` (default).
-- **Slow downloads**: try `./scripts/download_models.sh --official` if mirror is unstable.
+- **Slow downloads**: try `python scripts/download_models.py --official` if mirror is unstable.
 - **rembg fails**: switches automatically to threshold fallback; output may have noisy edges.
