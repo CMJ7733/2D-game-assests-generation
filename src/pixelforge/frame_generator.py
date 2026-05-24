@@ -33,9 +33,7 @@ class FrameGenerator:
             safety_checker=None,
             requires_safety_checker=False,
         ).to(self.cfg.device)
-        # Load IP-Adapter BEFORE enable_attention_slicing
-        # (slicing sets SlicedAttnProcessor which requires slice_size arg in new diffusers;
-        #  IP-Adapter re-creates processors and would crash if slicing is already active)
+        # Load IP-Adapter
         logger.info("Loading IP-Adapter...")
         ensure_cached(
             self.cfg.ip_adapter_repo,
@@ -48,8 +46,9 @@ class FrameGenerator:
             local_files_only=True,
         )
         self._pipe.set_ip_adapter_scale(self.cfg.ip_adapter_scale)
-        # Now safe to enable memory optimizations
-        self._pipe.enable_attention_slicing()
+        # NOTE: do NOT call enable_attention_slicing() — it is incompatible with
+        # IP-Adapter in diffusers >= 0.37 (SlicedAttnProcessor can't handle tuple
+        # encoder_hidden_states from IP-Adapter). VAE slicing is safe and sufficient.
         try:
             self._pipe.vae.enable_slicing()
         except AttributeError:
