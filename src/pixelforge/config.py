@@ -36,7 +36,7 @@ class GenerationConfig(BaseModel):
     palette_colors: int = 24
 
     device: str = "mps"
-    dtype: str = "float16"
+    dtype: str = "float32"
 
 
 DEFAULT_CONFIG = GenerationConfig()
