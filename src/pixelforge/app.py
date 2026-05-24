@@ -71,6 +71,8 @@ def run_pipeline(prompt: str, progress=gr.Progress()):
         sheet_path = OUTPUT_DIR / "character_sheet.png"
         sheet.save(sheet_path)
 
+        progress(1.0, desc="Done!")
+
         return (
             raw.get("front"),
             raw.get("left"),
