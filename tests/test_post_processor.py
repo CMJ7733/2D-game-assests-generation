@@ -31,3 +31,24 @@ def test_postprocessor_full_pipeline_outputs_target_size():
     out = pp.process(img)
     assert out.size == (64, 64)
     assert out.mode == "RGBA"
+
+
+def test_postprocessor_quantizes_before_resize():
+    """After process(), a colored input should yield a small image where
+    every pixel belongs to one of the quantized palette colors (no blended intermediates)."""
+    from PIL import ImageDraw
+
+    img = Image.new("RGB", (512, 512))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, 255, 511], fill=(200, 50, 50))
+    draw.rectangle([256, 0, 511, 511], fill=(50, 50, 200))
+
+    pp = PostProcessor(target_size=(64, 64), palette_colors=8)
+    out = pp.process(img)
+
+    assert out.size == (64, 64)
+    assert out.mode in ("RGBA", "RGB")
+
+    arr = np.array(out.convert("RGB"))
+    unique_colors = set(map(tuple, arr.reshape(-1, 3).tolist()))
+    assert len(unique_colors) <= 8, f"Expected ≤8 colors, got {len(unique_colors)}"

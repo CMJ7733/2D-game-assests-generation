@@ -37,13 +37,13 @@ def trim_to_content(img: Image.Image, padding: int = 2) -> Image.Image:
 
 
 def resize_to_target(img: Image.Image, target_size: tuple[int, int]) -> Image.Image:
-    """Downsample preserving aspect ratio and pad to target size with transparency."""
+    """Downsample preserving aspect ratio using LANCZOS and pad to target size with transparency."""
     img = img.convert("RGBA")
     w, h = img.size
     tw, th = target_size
     scale = min(tw / w, th / h)
     new_w, new_h = max(1, int(w * scale)), max(1, int(h * scale))
-    resized = img.resize((new_w, new_h), Image.NEAREST)
+    resized = img.resize((new_w, new_h), Image.LANCZOS)
     canvas = Image.new("RGBA", target_size, (0, 0, 0, 0))
     canvas.paste(resized, ((tw - new_w) // 2, (th - new_h) // 2), resized)
     return canvas
@@ -68,6 +68,7 @@ class PostProcessor:
     def process(self, raw_frame: Image.Image) -> Image.Image:
         stage1 = remove_background(raw_frame)
         stage2 = trim_to_content(stage1)
-        stage3 = resize_to_target(stage2, self.target_size)
-        stage4 = quantize_palette(stage3, self.palette_colors)
-        return stage4
+        stage3 = quantize_palette(stage2, self.palette_colors)
+        stage4 = resize_to_target(stage3, self.target_size)
+        stage5 = quantize_palette(stage4, self.palette_colors)
+        return stage5
