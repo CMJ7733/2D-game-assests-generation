@@ -1,4 +1,4 @@
-"""Top-level pipeline orchestration: prompt → reference → frames → sheet → export."""
+"""Top-level pipeline orchestration: prompt → 4-view character sheet → export."""
 from __future__ import annotations
 import gc
 import threading
@@ -11,26 +11,20 @@ from loguru import logger
 from pixelforge.config import DEFAULT_CONFIG, OUTPUT_DIR
 from pixelforge.prompt_engineer import enhance_prompt, build_negative_prompt
 from pixelforge.reference_builder import ReferenceBuilder
-from pixelforge.pose_library import PoseLibrary
-from pixelforge.frame_generator import FrameGenerator
-from pixelforge.quick_mode import QuickModeGenerator
 from pixelforge.post_processor import PostProcessor
-from pixelforge.sheet_composer import SheetComposer
-from pixelforge.exporter import Exporter
+
+VIEWS = ["front", "left", "right", "back"]
 
 
 def generate_character(
     user_prompt: str,
     output_dir: Path | str = OUTPUT_DIR,
     base_name: str = "character",
-    use_quick_mode: bool = False,
-    states: list[str] | None = None,
     progress_callback=None,
     stop_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    states = states or ["idle", "walk"]
     intermediates: dict[str, Any] = {}
 
     def _check_stop():
@@ -42,111 +36,63 @@ def generate_character(
             progress_callback(fraction, msg)
         logger.info(msg)
 
-    # Progress stage boundaries (normal mode)
-    P_REF = 0.03   # reference generation starts
-    P_REF_END = 0.20
-    P_POSE = 0.22
-    P_FRAMES_END = 0.85
-    P_POST_END = 0.93
-    P_SHEET_END = 0.97
-
-    emit(0.02, "Enhancing prompt...")
-    _check_stop()
-    enhanced = enhance_prompt(user_prompt)
     neg = build_negative_prompt()
-    intermediates["enhanced_prompt"] = enhanced
-
-    if use_quick_mode:
-        emit(P_REF, "Quick Mode: generating reference image...")
-        _check_stop()
-        qm = QuickModeGenerator()
-
-        def on_qm_ref_progress(frac: float, desc: str):
-            emit(P_REF + frac * (P_REF_END - P_REF), desc)
-
-        raw_frames = qm.generate(
-            enhanced, neg, n_poses=4, progress_callback=on_qm_ref_progress,
-        )
-        emit(P_FRAMES_END, f"Quick Mode: {len(raw_frames)} walk frames generated.")
-        animations = {
-            "walk": {"frames": list(range(len(raw_frames))), "fps": 12, "loop": True}
-        }
-    else:
-        emit(P_REF, "Generating reference image...")
-        _check_stop()
-        rb = ReferenceBuilder()
-
-        def on_ref_progress(frac: float, desc: str):
-            _check_stop()
-            emit(P_REF + frac * (P_REF_END - P_REF), desc)
-
-        ref = rb.generate(enhanced, neg, progress_callback=on_ref_progress)
-        intermediates["reference"] = ref
-        del rb
-        gc.collect()
-        torch.mps.empty_cache()
-        emit(P_REF_END, "Reference image generated.")
-
-        emit(P_POSE, "Loading pose library...")
-        _check_stop()
-        lib = PoseLibrary()
-        combined = lib.load_combined(states)
-        intermediates["poses"] = combined.frames
-        animations = combined.animations
-
-        n_frames = len(combined.frames)
-        emit(P_POSE, f"Generating {n_frames} animation frames...")
-        _check_stop()
-        fg = FrameGenerator()
-        fg.set_reference(ref)
-
-        def on_frame_progress(frac: float, desc: str):
-            _check_stop()
-            emit(P_POSE + frac * (P_FRAMES_END - P_POSE), desc)
-
-        raw_frames = fg.generate_frames(
-            enhanced, neg, combined.frames, progress_callback=on_frame_progress,
-            stop_event=stop_event,
-        )
-        intermediates["raw_frames"] = raw_frames
-        del fg
-        gc.collect()
-        torch.mps.empty_cache()
-
-    n_proc = len(raw_frames)
+    rb = ReferenceBuilder()
     pp = PostProcessor(
         target_size=DEFAULT_CONFIG.target_sprite_size,
         palette_colors=DEFAULT_CONFIG.palette_colors,
     )
-    processed = []
-    for j, f in enumerate(raw_frames):
-        frac = j / max(1, n_proc)
-        emit(P_FRAMES_END + frac * (P_POST_END - P_FRAMES_END),
-             f"Post-processing frame {j+1}/{n_proc}...")
-        processed.append(pp.process(f))
-    intermediates["processed_frames"] = processed
 
-    emit(P_SHEET_END, "Composing sprite sheet...")
-    sc = SheetComposer()
-    sheet, meta = sc.compose(
-        processed, frame_size=DEFAULT_CONFIG.target_sprite_size, animations=animations
-    )
-    emit(P_SHEET_END, "Exporting...")
-    ex = Exporter(output_dir)
-    paths = ex.export_generic(sheet, meta, base_name=base_name)
-    try:
-        paths["tres"] = ex.export_godot(meta, base_name=base_name, png_relative=f"{base_name}.png")
-    except Exception as e:
-        logger.warning(f"Godot export failed: {e}")
-    try:
-        paths["meta"] = ex.export_unity(meta, base_name=base_name)
-    except Exception as e:
-        logger.warning(f"Unity export failed: {e}")
+    raw_views: dict[str, Image.Image] = {}
+    processed_views: dict[str, Image.Image] = {}
+
+    for i, view in enumerate(VIEWS):
+        _check_stop()
+        base_frac = i / len(VIEWS)
+        next_frac = (i + 1) / len(VIEWS)
+
+        emit(base_frac, f"Generating {view} view ({i+1}/{len(VIEWS)})...")
+        prompt = enhance_prompt(user_prompt, view=view)
+
+        def on_progress(frac: float, desc: str, _bf=base_frac, _nf=next_frac):
+            emit(_bf + frac * (_nf - _bf) * 0.85, desc)
+
+        img = rb.generate(prompt, neg, progress_callback=on_progress)
+        raw_views[view] = img
+
+        processed = pp.process(img)
+        processed_views[view] = processed
+        emit(next_frac * 0.9, f"{view.capitalize()} view done.")
+
+    del rb
+    gc.collect()
+    torch.mps.empty_cache()
+
+    intermediates["raw_views"] = raw_views
+    intermediates["processed_views"] = processed_views
+
+    sheet = _compose_sheet(processed_views)
+    sheet_path = output_dir / f"{base_name}.png"
+    sheet.save(sheet_path)
 
     emit(1.0, "Done!")
     return {
         "sheet": sheet,
-        "metadata": meta,
-        "paths": paths,
+        "raw_views": raw_views,
+        "processed_views": processed_views,
+        "paths": {"png": sheet_path},
         "intermediates": intermediates,
     }
+
+
+def _compose_sheet(views: dict[str, Image.Image]) -> Image.Image:
+    size = DEFAULT_CONFIG.target_sprite_size
+    w, h = size
+    canvas = Image.new("RGBA", (w * 2, h * 2), (40, 40, 40, 255))
+    positions = {"back": (0, 0), "front": (0, h), "left": (w, 0), "right": (w, h)}
+    for view, pos in positions.items():
+        img = views.get(view)
+        if img:
+            img = img.resize(size, Image.LANCZOS) if img.size != size else img
+            canvas.paste(img, pos)
+    return canvas

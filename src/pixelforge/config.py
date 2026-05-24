@@ -18,10 +18,6 @@ EXAMPLES_DIR = ASSETS_DIR / "examples"
 
 class GenerationConfig(BaseModel):
     sd_model_id: str = "Onodofthenorth/SD_PixelArt_SpriteSheet_Generator"
-    controlnet_model_id: str = "lllyasviel/sd-controlnet-openpose"
-    ip_adapter_repo: str = "h94/IP-Adapter"
-    ip_adapter_subfolder: str = "models"
-    ip_adapter_weight_name: str = "ip-adapter_sd15.bin"
     rmbg_model_id: str = "briaai/RMBG-1.4"
 
     image_size: int = 512
@@ -29,11 +25,8 @@ class GenerationConfig(BaseModel):
     guidance_scale: float = 7.5
     seed: int = 42
 
-    ip_adapter_scale: float = 0.7
-    controlnet_conditioning_scale: float = 0.9
-
-    target_sprite_size: tuple[int, int] = (64, 64)
-    palette_colors: int = 24
+    target_sprite_size: tuple[int, int] = (256, 256)
+    palette_colors: int = 32
 
     device: str = "mps"
     dtype: str = "float32"
