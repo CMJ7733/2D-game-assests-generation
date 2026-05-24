@@ -12,7 +12,7 @@ def test_builder_initializes_pipeline_with_correct_model(mock_sd, mock_cache):
     rb._ensure_loaded()
     mock_sd.from_pretrained.assert_called_once()
     call_args = mock_sd.from_pretrained.call_args
-    assert "stable-diffusion-v1-5" in call_args[0][0]
+    assert "SD_PixelArt_SpriteSheet_Generator" in call_args[0][0]
 
 
 @patch("pixelforge.reference_builder.ensure_cached")

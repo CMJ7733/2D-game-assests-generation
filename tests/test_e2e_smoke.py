@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 @pytest.mark.skipif(
-    not Path("models").exists() or not list(Path("models").rglob("*.safetensors")),
+    not Path("models").exists() or not list(Path("models").rglob("model_index.json")),
     reason="Models not downloaded — skip e2e."
 )
 def test_quickmode_e2e(tmp_path):
