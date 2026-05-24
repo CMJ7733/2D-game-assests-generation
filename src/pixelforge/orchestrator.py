@@ -1,6 +1,7 @@
 """Top-level pipeline orchestration: prompt → reference → frames → sheet → export."""
 from __future__ import annotations
 import gc
+import threading
 from pathlib import Path
 from PIL import Image
 from typing import Any
@@ -25,11 +26,16 @@ def generate_character(
     use_quick_mode: bool = False,
     states: list[str] | None = None,
     progress_callback=None,
+    stop_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     states = states or ["idle", "walk"]
     intermediates: dict[str, Any] = {}
+
+    def _check_stop():
+        if stop_event and stop_event.is_set():
+            raise StopIteration("Stopped by user")
 
     def emit(fraction: float, msg: str):
         if progress_callback:
@@ -45,12 +51,14 @@ def generate_character(
     P_SHEET_END = 0.97
 
     emit(0.02, "Enhancing prompt...")
+    _check_stop()
     enhanced = enhance_prompt(user_prompt)
     neg = build_negative_prompt()
     intermediates["enhanced_prompt"] = enhanced
 
     if use_quick_mode:
         emit(0.05, "Quick Mode: generating sprite sheet directly...")
+        _check_stop()
         qm = QuickModeGenerator()
         raw_frames = qm.generate(enhanced, columns=8)
         emit(0.85, f"Quick Mode: {len(raw_frames)} frames generated.")
@@ -59,9 +67,11 @@ def generate_character(
         }
     else:
         emit(P_REF, "Generating reference image...")
+        _check_stop()
         rb = ReferenceBuilder()
 
         def on_ref_progress(frac: float, desc: str):
+            _check_stop()
             emit(P_REF + frac * (P_REF_END - P_REF), desc)
 
         ref = rb.generate(enhanced, neg, progress_callback=on_ref_progress)
@@ -72,6 +82,7 @@ def generate_character(
         emit(P_REF_END, "Reference image generated.")
 
         emit(P_POSE, "Loading pose library...")
+        _check_stop()
         lib = PoseLibrary()
         combined = lib.load_combined(states)
         intermediates["poses"] = combined.frames
@@ -79,14 +90,17 @@ def generate_character(
 
         n_frames = len(combined.frames)
         emit(P_POSE, f"Generating {n_frames} animation frames...")
+        _check_stop()
         fg = FrameGenerator()
         fg.set_reference(ref)
 
         def on_frame_progress(frac: float, desc: str):
+            _check_stop()
             emit(P_POSE + frac * (P_FRAMES_END - P_POSE), desc)
 
         raw_frames = fg.generate_frames(
-            enhanced, neg, combined.frames, progress_callback=on_frame_progress
+            enhanced, neg, combined.frames, progress_callback=on_frame_progress,
+            stop_event=stop_event,
         )
         intermediates["raw_frames"] = raw_frames
         del fg

@@ -3,12 +3,15 @@ from __future__ import annotations
 from pixelforge.config import DEFAULT_CONFIG, ensure_dirs, OUTPUT_DIR
 
 import gradio as gr
+import threading
 import zipfile
 from pathlib import Path
 from PIL import Image
 from loguru import logger
 
 from pixelforge.orchestrator import generate_character
+
+_stop_event = threading.Event()
 
 
 def make_gif(frames: list[Image.Image], fps: int = 12) -> Path:
@@ -41,12 +44,17 @@ def make_zip(paths: dict, base_name: str) -> Path:
 
 def run_pipeline(prompt: str, quick_mode: bool, progress=gr.Progress()):
     ensure_dirs()
-    progress(0.0, desc="Starting...")
+    _stop_event.clear()
+
+    def on_progress(fraction: float, desc: str):
+        progress(fraction, desc=desc)
 
     try:
         result = generate_character(
             user_prompt=prompt,
             use_quick_mode=quick_mode,
+            progress_callback=on_progress,
+            stop_event=_stop_event,
         )
 
         inter = result["intermediates"]
@@ -70,9 +78,16 @@ def run_pipeline(prompt: str, quick_mode: bool, progress=gr.Progress()):
             str(zip_path),
             status,
         )
+    except StopIteration:
+        return (None, None, None, None, None, None, None, "Stopped by user.")
     except Exception as e:
         logger.exception("Pipeline failed")
         return (None, None, None, None, None, None, None, f"Error: {e}")
+
+
+def stop_pipeline():
+    _stop_event.set()
+    return "Stopping..."
 
 
 def build_app() -> gr.Blocks:
@@ -90,7 +105,9 @@ def build_app() -> gr.Blocks:
                     lines=3,
                 )
                 quick = gr.Checkbox(label="Quick Mode (Plan B: direct sprite-sheet)", value=False)
-                btn = gr.Button("Generate", variant="primary", size="lg")
+                with gr.Row():
+                    btn = gr.Button("Generate", variant="primary", size="lg")
+                    stop_btn = gr.Button("Stop", variant="stop", size="lg")
                 status = gr.Textbox(label="Status", interactive=False)
                 zip_out = gr.File(label="Download all (ZIP)")
             with gr.Column(scale=2):
@@ -104,10 +121,16 @@ def build_app() -> gr.Blocks:
                 raw_out = gr.Gallery(label="3. Raw Frames (first 4)", columns=4, height=120)
                 proc_out = gr.Gallery(label="4. Processed Frames (first 4)", columns=4, height=120)
 
-        btn.click(
+        gen_event = btn.click(
             run_pipeline,
             inputs=[prompt, quick],
             outputs=[sheet_out, ref_out, pose_out, raw_out, proc_out, preview, zip_out, status],
+        )
+        stop_btn.click(
+            stop_pipeline,
+            inputs=[],
+            outputs=[status],
+            cancels=[gen_event],
         )
     return app
 

@@ -1,5 +1,6 @@
 """Generate animation frames conditioned on pose skeletons (and later IP-Adapter)."""
 from __future__ import annotations
+import threading
 from pixelforge.config import DEFAULT_CONFIG, ensure_cached
 
 import torch
@@ -66,6 +67,7 @@ class FrameGenerator:
         pose_images: list[Image.Image],
         seed: int | None = None,
         progress_callback=None,
+        stop_event: threading.Event | None = None,
     ) -> list[Image.Image]:
         self._ensure_loaded()
         seed_val = seed if seed is not None else self.cfg.seed
@@ -73,6 +75,9 @@ class FrameGenerator:
         total_steps = self.cfg.num_inference_steps
         results: list[Image.Image] = []
         for i, pose in enumerate(pose_images):
+            if stop_event and stop_event.is_set():
+                logger.info(f"Frame generation stopped by user at frame {i+1}/{n_frames}.")
+                break
             generator = torch.Generator(device=self.cfg.device).manual_seed(seed_val)
             frame_start = i / n_frames
             frame_range = 1.0 / n_frames
