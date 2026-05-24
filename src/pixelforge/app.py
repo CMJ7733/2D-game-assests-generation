@@ -102,7 +102,7 @@ CSS = """
 def build_app() -> gr.Blocks:
     with gr.Blocks(title="PixelForge") as app:
         gr.HTML('<h1 id="main-title">PixelForge</h1>')
-        gr.HTML('<p id="subtitle">Text → 4-View Pixel Art Character Reference Sheet</p>')
+        gr.HTML('<p id="subtitle">Text → 4-View Pixel Art Character Reference</p>')
 
         with gr.Row():
             with gr.Column(scale=1, min_width=300):
