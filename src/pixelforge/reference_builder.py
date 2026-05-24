@@ -38,18 +38,29 @@ class ReferenceBuilder:
         prompt: str,
         negative_prompt: str = "",
         seed: int | None = None,
+        progress_callback=None,
     ) -> Image.Image:
         self._ensure_loaded()
         generator = torch.Generator(device=self.cfg.device).manual_seed(
             seed if seed is not None else self.cfg.seed
         )
+        total_steps = self.cfg.num_inference_steps
+
+        def _on_step(pipe, step_index, timestep, callback_kwargs):
+            step = step_index + 1
+            if progress_callback:
+                progress_callback(step / total_steps,
+                                  f"Reference image — step {step}/{total_steps}")
+            return callback_kwargs
+
         result = self._pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
-            num_inference_steps=self.cfg.num_inference_steps,
+            num_inference_steps=total_steps,
             guidance_scale=self.cfg.guidance_scale,
             width=self.cfg.image_size,
             height=self.cfg.image_size,
             generator=generator,
+            callback_on_step_end=_on_step,
         )
         return result.images[0]

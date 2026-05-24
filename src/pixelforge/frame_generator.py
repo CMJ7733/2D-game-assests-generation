@@ -65,24 +65,39 @@ class FrameGenerator:
         negative_prompt: str,
         pose_images: list[Image.Image],
         seed: int | None = None,
+        progress_callback=None,
     ) -> list[Image.Image]:
         self._ensure_loaded()
         seed_val = seed if seed is not None else self.cfg.seed
+        n_frames = len(pose_images)
+        total_steps = self.cfg.num_inference_steps
         results: list[Image.Image] = []
         for i, pose in enumerate(pose_images):
             generator = torch.Generator(device=self.cfg.device).manual_seed(seed_val)
+            frame_start = i / n_frames
+            frame_range = 1.0 / n_frames
+            cur_i = i
+
+            def _on_step(pipe, step_index, timestep, callback_kwargs, _i=cur_i, _fs=frame_start, _fr=frame_range):
+                step = step_index + 1
+                if progress_callback:
+                    frac = _fs + (step / total_steps) * _fr
+                    progress_callback(frac, f"Frame {_i+1}/{n_frames} — step {step}/{total_steps}")
+                return callback_kwargs
+
             pipe_kwargs = dict(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
                 image=pose,
-                num_inference_steps=self.cfg.num_inference_steps,
+                num_inference_steps=total_steps,
                 guidance_scale=self.cfg.guidance_scale,
                 controlnet_conditioning_scale=self.cfg.controlnet_conditioning_scale,
                 generator=generator,
+                callback_on_step_end=_on_step,
             )
             if self._reference_image is not None:
                 pipe_kwargs["ip_adapter_image"] = self._reference_image
             output = self._pipe(**pipe_kwargs)
             results.append(output.images[0])
-            logger.info(f"Frame {i+1}/{len(pose_images)} generated.")
+            logger.info(f"Frame {i+1}/{n_frames} generated.")
         return results
