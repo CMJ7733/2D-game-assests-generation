@@ -3,19 +3,21 @@ from __future__ import annotations
 import os
 
 _BASE_ANCHORS = [
-    "pixel art",
-    "game asset",
+    "PixelartLSS",
+    "side-view",
+    "facing left",
+    "2D game character",
     "full body",
-    "side view",
     "white background",
-    "16-bit style",
-    "crisp pixels",
+    "clean pixel art",
 ]
 
 _NEGATIVE_TERMS = [
     "blurry", "3d", "photorealistic", "multiple characters",
     "watermark", "text", "signature", "low quality", "deformed",
     "cropped", "out of frame", "extra limbs",
+    "front view", "facing forward", "facing camera",
+    "3/4 view", "isometric",
 ]
 
 
