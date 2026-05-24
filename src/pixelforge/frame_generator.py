@@ -33,12 +33,9 @@ class FrameGenerator:
             safety_checker=None,
             requires_safety_checker=False,
         ).to(self.cfg.device)
-        self._pipe.enable_attention_slicing()
-        try:
-            self._pipe.enable_vae_slicing()
-        except AttributeError:
-            pass
-        # Load IP-Adapter
+        # Load IP-Adapter BEFORE enable_attention_slicing
+        # (slicing sets SlicedAttnProcessor which requires slice_size arg in new diffusers;
+        #  IP-Adapter re-creates processors and would crash if slicing is already active)
         logger.info("Loading IP-Adapter...")
         ensure_cached(
             self.cfg.ip_adapter_repo,
@@ -51,6 +48,12 @@ class FrameGenerator:
             local_files_only=True,
         )
         self._pipe.set_ip_adapter_scale(self.cfg.ip_adapter_scale)
+        # Now safe to enable memory optimizations
+        self._pipe.enable_attention_slicing()
+        try:
+            self._pipe.vae.enable_slicing()
+        except AttributeError:
+            pass
         logger.info("FrameGenerator pipeline + IP-Adapter loaded.")
 
     def set_reference(self, image: Image.Image) -> None:

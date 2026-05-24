@@ -28,7 +28,7 @@ class ReferenceBuilder:
         ).to(self.cfg.device)
         self._pipe.enable_attention_slicing()
         try:
-            self._pipe.enable_vae_slicing()
+            self._pipe.vae.enable_slicing()
         except AttributeError:
             pass
         logger.info("SD1.5 loaded.")
