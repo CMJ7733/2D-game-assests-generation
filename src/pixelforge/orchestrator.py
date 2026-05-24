@@ -57,11 +57,17 @@ def generate_character(
     intermediates["enhanced_prompt"] = enhanced
 
     if use_quick_mode:
-        emit(0.05, "Quick Mode: generating sprite sheet directly...")
+        emit(P_REF, "Quick Mode: generating reference image...")
         _check_stop()
         qm = QuickModeGenerator()
-        raw_frames = qm.generate(enhanced, n_frames=8)
-        emit(0.85, f"Quick Mode: {len(raw_frames)} frames generated.")
+
+        def on_qm_ref_progress(frac: float, desc: str):
+            emit(P_REF + frac * (P_REF_END - P_REF), desc)
+
+        raw_frames = qm.generate(
+            enhanced, neg, n_poses=4, progress_callback=on_qm_ref_progress,
+        )
+        emit(P_FRAMES_END, f"Quick Mode: {len(raw_frames)} walk frames generated.")
         animations = {
             "walk": {"frames": list(range(len(raw_frames))), "fps": 12, "loop": True}
         }
