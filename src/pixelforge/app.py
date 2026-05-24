@@ -100,7 +100,7 @@ CSS = """
 
 
 def build_app() -> gr.Blocks:
-    with gr.Blocks(title="PixelForge", css=CSS, theme=gr.themes.Default(primary_hue="emerald")) as app:
+    with gr.Blocks(title="PixelForge") as app:
         gr.HTML('<h1 id="main-title">PixelForge</h1>')
         gr.HTML('<p id="subtitle">Text → 4-View Pixel Art Character Reference Sheet</p>')
 
@@ -120,18 +120,18 @@ def build_app() -> gr.Blocks:
         with gr.Row(equal_height=True):
             with gr.Column():
                 gr.HTML('<p class="view-label">← Left Side</p>')
-                img_left = gr.Image(label="", elem_classes=["view-img"], show_download_button=True)
+                img_left = gr.Image(label="", elem_classes=["view-img"])
             with gr.Column():
                 gr.HTML('<p class="view-label">Front →</p>')
-                img_front = gr.Image(label="", elem_classes=["view-img"], show_download_button=True)
+                img_front = gr.Image(label="", elem_classes=["view-img"])
 
         with gr.Row(equal_height=True):
             with gr.Column():
                 gr.HTML('<p class="view-label">Right Side →</p>')
-                img_right = gr.Image(label="", elem_classes=["view-img"], show_download_button=True)
+                img_right = gr.Image(label="", elem_classes=["view-img"])
             with gr.Column():
                 gr.HTML('<p class="view-label">← Back</p>')
-                img_back = gr.Image(label="", elem_classes=["view-img"], show_download_button=True)
+                img_back = gr.Image(label="", elem_classes=["view-img"])
 
         gen_event = btn.click(
             run_pipeline,
@@ -148,4 +148,4 @@ def build_app() -> gr.Blocks:
 
 
 if __name__ == "__main__":
-    build_app().launch(server_name="127.0.0.1", server_port=7860)
+    build_app().launch(server_name="127.0.0.1", server_port=7860, css=CSS, theme=gr.themes.Default(primary_hue="emerald"))
