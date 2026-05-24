@@ -60,7 +60,7 @@ def generate_character(
         emit(0.05, "Quick Mode: generating sprite sheet directly...")
         _check_stop()
         qm = QuickModeGenerator()
-        raw_frames = qm.generate(enhanced, columns=8)
+        raw_frames = qm.generate(enhanced, n_frames=8)
         emit(0.85, f"Quick Mode: {len(raw_frames)} frames generated.")
         animations = {
             "walk": {"frames": list(range(len(raw_frames))), "fps": 12, "loop": True}

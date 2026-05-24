@@ -1,27 +1,35 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from PIL import Image
 from pixelforge.quick_mode import QuickModeGenerator
+from pixelforge.prompt_engineer import build_negative_prompt
 
 
-def test_quick_mode_uses_sprite_sheet_prompt_anchors():
+@patch("pixelforge.quick_mode.ReferenceBuilder")
+def test_quick_mode_generates_n_frames(MockBuilder):
+    fake_img = Image.new("RGB", (512, 512), "red")
+    mock_instance = MockBuilder.return_value
+    mock_instance.generate.return_value = fake_img
+
     qm = QuickModeGenerator()
-    prompt = qm._build_sheet_prompt("knight")
-    assert "sprite sheet" in prompt.lower()
-    assert "horizontal" in prompt.lower() or "grid" in prompt.lower()
-    assert "knight" in prompt
+    frames = qm.generate("knight", n_frames=8)
 
-
-def test_slice_sheet_returns_expected_frame_count():
-    sheet = Image.new("RGB", (512, 64), "white")
-    qm = QuickModeGenerator()
-    frames = qm._slice_sheet(sheet, columns=8)
     assert len(frames) == 8
-    assert frames[0].size == (64, 64)
+    assert all(f.size == (512, 512) for f in frames)
+    mock_instance.generate.assert_called_once()
+    call_args = mock_instance.generate.call_args
+    assert "knight" in call_args[0][0]
+    assert call_args[0][1] == build_negative_prompt()
 
 
-def test_slice_sheet_handles_2x4_grid():
-    sheet = Image.new("RGB", (256, 128), "white")
+@patch("pixelforge.quick_mode.ReferenceBuilder")
+def test_quick_mode_passes_negative_prompt(MockBuilder):
+    fake_img = Image.new("RGB", (512, 512), "red")
+    mock_instance = MockBuilder.return_value
+    mock_instance.generate.return_value = fake_img
+
     qm = QuickModeGenerator()
-    frames = qm._slice_sheet(sheet, columns=4, rows=2)
-    assert len(frames) == 8
-    assert frames[0].size == (64, 64)
+    qm.generate("knight")
+
+    neg = mock_instance.generate.call_args[0][1]
+    assert "front view" in neg
+    assert "3d" in neg
