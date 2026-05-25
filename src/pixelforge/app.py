@@ -1,56 +1,22 @@
 """PixelForge Gradio UI — 4-view pixel art character reference sheet generator."""
 from __future__ import annotations
-from pixelforge.config import ensure_dirs, OUTPUT_DIR
+from pixelforge.config import ensure_dirs
 
 import gradio as gr
 import threading
-from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
 from loguru import logger
 
 from pixelforge.orchestrator import generate_character
 
 _stop_event = threading.Event()
 
-VIEW_LABELS = {"back": "BACK", "left": "LEFT", "right": "RIGHT", "front": "FRONT"}
-VIEW_POSITIONS = {"back": (0, 0), "left": (1, 0), "right": (1, 1), "front": (0, 1)}
 
-
-def _label_image(img: Image.Image, label: str) -> Image.Image:
-    img = img.convert("RGBA")
-    draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 16)
-    except Exception:
-        font = ImageFont.load_default()
-    bbox = draw.textbbox((0, 0), label, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    x = (img.width - tw) // 2
-    y = img.height - th - 6
-    draw.rectangle([x - 4, y - 2, x + tw + 4, y + th + 2], fill=(0, 0, 0, 180))
-    draw.text((x, y), label, fill=(255, 255, 255, 230), font=font)
-    return img
-
-
-def _make_character_sheet(raw_views: dict, size: int = 512) -> Image.Image:
-    gap = 4
-    total_w = size * 2 + gap
-    total_h = size * 2 + gap
-    canvas = Image.new("RGBA", (total_w, total_h), (30, 30, 35, 255))
-
-    for view, (col, row) in VIEW_POSITIONS.items():
-        img = raw_views.get(view)
-        if img:
-            img = img.resize((size, size), Image.LANCZOS) if img.size != (size, size) else img
-            labeled = _label_image(img, VIEW_LABELS[view])
-            x = col * (size + gap)
-            y = row * (size + gap)
-            canvas.paste(labeled, (x, y))
-
-    return canvas
-
-
-def run_pipeline(prompt: str, progress=gr.Progress()):
+def run_pipeline(
+    prompt: str,
+    profile: str,
+    allow_api_fallback: bool,
+    progress=gr.Progress(),
+):
     ensure_dirs()
     _stop_event.clear()
 
@@ -60,26 +26,28 @@ def run_pipeline(prompt: str, progress=gr.Progress()):
     try:
         result = generate_character(
             user_prompt=prompt,
+            profile=profile.lower(),
+            keep_raw_views=False,
+            allow_api_fallback=allow_api_fallback,
             progress_callback=on_progress,
             stop_event=_stop_event,
         )
 
-        raw = result["raw_views"]
-        processed = result["processed_views"]
+        if not result["paths"]:
+            return (None, None, None, None, None, result["message"])
 
-        sheet = _make_character_sheet(raw, size=512)
-        sheet_path = OUTPUT_DIR / "character_sheet.png"
-        sheet.save(sheet_path)
+        processed = result["processed_views"]
+        sheet_path = result["paths"]["png"]
 
         progress(1.0, desc="Done!")
 
         return (
-            raw.get("front"),
-            raw.get("left"),
-            raw.get("right"),
-            raw.get("back"),
+            processed.get("front"),
+            processed.get("left"),
+            processed.get("right"),
+            processed.get("back"),
             str(sheet_path),
-            f"Done! {len(raw)} views generated.",
+            result["message"],
         )
     except StopIteration:
         return (None, None, None, None, None, "Stopped by user.")
@@ -113,6 +81,17 @@ def build_app() -> gr.Blocks:
                     placeholder="A knight with a red cape and blonde hair holding a sword",
                     lines=3,
                 )
+                profile = gr.Dropdown(
+                    choices=["Eco", "Balanced", "Quality"],
+                    value="Balanced",
+                    label="Performance profile",
+                    info="Eco uses less memory and is faster. Quality uses more memory.",
+                )
+                allow_api_fallback = gr.Checkbox(
+                    value=False,
+                    label="Allow API fallback",
+                    info="Only used when local generation fails and API keys are configured.",
+                )
                 with gr.Row():
                     btn = gr.Button("Generate", variant="primary", size="lg")
                     stop_btn = gr.Button("Stop", variant="stop", size="lg")
@@ -137,7 +116,7 @@ def build_app() -> gr.Blocks:
 
         gen_event = btn.click(
             run_pipeline,
-            inputs=[prompt],
+            inputs=[prompt, profile, allow_api_fallback],
             outputs=[img_front, img_left, img_right, img_back, sheet_file, status],
         )
         stop_btn.click(

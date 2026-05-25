@@ -7,6 +7,7 @@ def test_enhance_prompt_adds_view_anchors():
     assert "side-view" in out
     assert "facing left" in out.lower()
     assert "knight with sword" in out
+    assert "single character" in out.lower()
 
 
 def test_enhance_prompt_front_view_uses_fss_trigger():
@@ -33,3 +34,4 @@ def test_negative_prompt_excludes_anti_pixel_terms():
     assert "3d" in neg
     assert "photorealistic" in neg
     assert "multiple characters" in neg
+    assert "sprite sheet" in neg

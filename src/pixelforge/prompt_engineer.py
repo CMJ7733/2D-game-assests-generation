@@ -18,7 +18,13 @@ _VIEW_ANCHORS = {
 
 _COMMON_ANCHORS = [
     "2D game character",
+    "single character",
+    "one character only",
+    "solo subject",
+    "consistent character design across views",
+    "same outfit and colors across views",
     "full body",
+    "centered composition",
     "white background",
     "clean pixel art",
 ]
@@ -27,6 +33,8 @@ _NEGATIVE_TERMS = [
     "blurry", "3d", "photorealistic", "multiple characters",
     "watermark", "text", "signature", "low quality", "deformed",
     "cropped", "out of frame", "extra limbs", "isometric",
+    "sprite sheet", "character sheet", "contact sheet", "triptych",
+    "duplicate character", "repeated poses", "crowd",
 ]
 
 
